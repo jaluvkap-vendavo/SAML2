@@ -1,4 +1,10 @@
-# SAML2
+﻿# SAML2
+
+> **Vendavo fork.** Fork of [elerch/SAML2](https://github.com/elerch/SAML2) (Mozilla Public
+> License 2.0), maintained for Vendavo Pricepoint. Modifications are listed in
+> [CHANGELOG-VENDAVO.md](CHANGELOG-VENDAVO.md); the source of every modified file is in this
+> repository, under the same licence as upstream.
+
 Fork of SAML2 library on codeplex. This library removes dependencies on Asp.net
 
 This project now consists of three libraries
