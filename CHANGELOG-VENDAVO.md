@@ -33,3 +33,11 @@ thread safe.
 
 No public API signatures changed; the assembly stays binary compatible with
 `Owin.Security.Saml` 1.0.0.
+
+Retargeted every project in the solution from .NET Framework 4.5 to 4.8, matching the
+consuming application (Pricepoint targets `net48`). Upstream targeted 4.5, whose targeting
+pack is no longer installed by default with current Visual Studio. All projects in the
+solution are moved together, since a 4.5 project cannot reference a 4.8 assembly. This does
+not change runtime behaviour for Pricepoint: .NET Framework quirks are selected per
+application from the host's `httpRuntime targetFramework`, which is already 4.8. The NuGet
+package now carries the assembly under `lib/net48` instead of `lib/net45`.
