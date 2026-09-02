@@ -41,3 +41,17 @@ solution are moved together, since a 4.5 project cannot reference a 4.8 assembly
 not change runtime behaviour for Pricepoint: .NET Framework quirks are selected per
 application from the host's `httpRuntime targetFramework`, which is already 4.8. The NuGet
 package now carries the assembly under `lib/net48` instead of `lib/net45`.
+
+Assembly identity is pinned so the patched build stays a drop-in replacement for the
+published upstream package: `AssemblyVersion` is `1.0.0.0` (the committed value was
+`2.0.0.0`, a leftover of `Saml2CoreNupkg.ps1` rewriting it at pack time), while
+`AssemblyFileVersion` `1.0.1.0` and `AssemblyInformationalVersion` `1.0.1-vendavo`
+identify the build. Consumers of the published 1.0.0 packages have no binding redirect
+for these assemblies, so the version must not move.
+
+Packaging for the internal feed lives in `packaging/`: a nuspec per shipped assembly
+(`Vendavo.SAML2.Core`, `Vendavo.Owin.Security.Saml`, both 1.0.1) and `pack.ps1`, which
+builds Release, asserts the identity above and packs both. `Vendavo.Owin.Security.Saml`
+declares the same dependencies as the upstream package with `Saml2.Core` replaced by
+`Vendavo.SAML2.Core`; both packages must be used together, since taking only one leaves
+two copies of the same assembly identity in the restore graph.

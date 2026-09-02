@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>Vendavo.Owin.Security.Saml</id>
+    <version>1.0.1</version>
+    <title>Owin.Security.Saml (Vendavo fork)</title>
+    <authors>Emil Lerch, Github Contributors</authors>
+    <owners>Vendavo</owners>
+    <license type="expression">MPL-2.0</license>
+    <projectUrl>https://github.com/jaluvkap-vendavo/SAML2</projectUrl>
+    <repository type="git" url="https://github.com/jaluvkap-vendavo/SAML2.git" branch="vendavo/fix-expectedresponses-thread-safety" />
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Vendavo fork of Owin.Security.Saml (elerch/SAML2). Owin middleware implementing the SAML2 protocol as a Service Provider, retargeted to .NET Framework 4.8 and built against Vendavo.SAML2.Core.</description>
+    <copyright>Copyright 2017</copyright>
+    <tags>SAML2 Owin library</tags>
+    <dependencies>
+      <group targetFramework="net48">
+        <!-- Mirrors the dependency set declared by the upstream Owin.Security.Saml 1.0.0 package,
+             with Saml2.Core replaced by this fork, so the restore graph of consumers does not change.
+             Upstream under-declares: the assembly also compiles against Microsoft.Owin, Owin and
+             System.IdentityModel.Tokens.Jwt, which consumers already supply themselves. -->
+        <dependency id="Vendavo.SAML2.Core" version="1.0.1" />
+        <dependency id="Microsoft.IdentityModel.Protocol.Extensions" version="1.0.1" />
+        <dependency id="Microsoft.Owin.Security" version="3.0.0" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="..\src\Owin.Security.Saml\bin\Release\Owin.Security.Saml.dll" target="lib\net48" />
+    <file src="..\src\Owin.Security.Saml\bin\Release\Owin.Security.Saml.pdb" target="lib\net48" />
+    <file src="..\LICENSE" target="" />
+    <file src="..\CHANGELOG-VENDAVO.md" target="" />
+  </files>
+</package>
