@@ -11,6 +11,7 @@
     <repository type="git" url="https://github.com/jaluvkap-vendavo/SAML2.git" branch="vendavo/fix-expectedresponses-thread-safety" />
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Vendavo fork of Owin.Security.Saml (elerch/SAML2). Owin middleware implementing the SAML2 protocol as a Service Provider, retargeted to .NET Framework 4.8 and built against Vendavo.SAML2.Core.</description>
+    <readme>README.md</readme>
     <copyright>Copyright 2017</copyright>
     <tags>SAML2 Owin library</tags>
     <dependencies>
@@ -28,7 +29,8 @@
   <files>
     <file src="..\src\Owin.Security.Saml\bin\Release\Owin.Security.Saml.dll" target="lib\net48" />
     <file src="..\src\Owin.Security.Saml\bin\Release\Owin.Security.Saml.pdb" target="lib\net48" />
-    <file src="..\LICENSE" target="" />
-    <file src="..\CHANGELOG-VENDAVO.md" target="" />
+    <file src="README.md" target="README.md" />
+    <file src="..\LICENSE" target="LICENSE" />
+    <file src="..\CHANGELOG-VENDAVO.md" target="CHANGELOG-VENDAVO.md" />
   </files>
 </package>
