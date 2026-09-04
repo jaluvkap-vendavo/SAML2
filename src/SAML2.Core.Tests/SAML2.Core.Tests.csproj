@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>SAML2.Core.Tests</AssemblyName>
+    <RootNamespace>SAML2.Core.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+
+    <!--
+      Which SAML2.Core to test. Override it to run the same tests against another build, which
+      is how you confirm they actually catch the defects rather than merely passing:
+        dotnet test -p:Saml2CorePath=<path to a pre-fix SAML2.Core.dll>
+    -->
+    <Saml2CorePath Condition="'$(Saml2CorePath)' == ''">$(MSBuildThisFileDirectory)..\SAML2.Core\bin\$(Configuration)\SAML2.Core.dll</Saml2CorePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Deliberately a Reference and not a ProjectReference: SAML2.Core is a legacy, non-SDK
+      csproj, which the dotnet CLI cannot build, so a ProjectReference would make dotnet test
+      fail on the dependency rather than on any test. Build SAML2.Core with MSBuild first -
+      packaging/pack.ps1 does, or build the configuration you intend to test.
+    -->
+    <Reference Include="SAML2.Core">
+      <HintPath>$(Saml2CorePath)</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="RequireSaml2Core" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(Saml2CorePath)')"
+           Text="Not found: $(Saml2CorePath). Build src\SAML2.Core\SAML2.Core.csproj with MSBuild in configuration '$(Configuration)' first, or point -p:Saml2CorePath at the assembly to test." />
+    <Message Importance="high" Text="Testing $(Saml2CorePath)" />
+  </Target>
+
+</Project>

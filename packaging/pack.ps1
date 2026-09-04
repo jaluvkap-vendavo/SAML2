@@ -29,7 +29,7 @@ $srcRoot = Join-Path $repoRoot "src"
 # binding redirect for SAML2.Core. Note that Saml2CoreNupkg.ps1 rewrites these attributes,
 # so this check also catches that script having been run and left the tree dirty.
 $expectedAssemblyVersion = "1.0.0.0"
-$expectedFileVersion = "1.0.1.0"
+$expectedFileVersion = "1.0.2.0"
 
 function Get-MSBuild {
     $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio/Installer/vswhere.exe"
@@ -98,7 +98,3 @@ foreach ($nuspec in Get-ChildItem -Path $PSScriptRoot -Filter "Vendavo.*.nuspec"
     & $nuget pack $nuspec.FullName -OutputDirectory $OutputDirectory -NonInteractive
     if ($LASTEXITCODE -ne 0) { throw "Pack failed: $($nuspec.Name)" }
 }
-
-Write-Host ""
-Write-Host "Packages in $OutputDirectory. Publish with:"
-Write-Host "  dotnet nuget push <package>.nupkg --source https://pkgs.dev.azure.com/vendavopricepoint/pricepoint-eng/_packaging/Vendavo.Core/nuget/v3/index.json --api-key az --interactive"

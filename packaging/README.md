@@ -18,7 +18,13 @@ with the public counterpart puts two assemblies with the identical identity
 `AssemblyVersion` is frozen at `1.0.0.0`, matching the published upstream 1.0.0 packages,
 because consumers have no binding redirect for these assemblies. That also makes the
 assemblies drop-in replacements in an existing deployment. The build is identified by
-`AssemblyFileVersion` 1.0.1.0 and `AssemblyInformationalVersion` 1.0.1-vendavo.
+`AssemblyFileVersion` 1.0.2.0 and `AssemblyInformationalVersion` 1.0.2-vendavo.
+
+## Tests
+
+    dotnet test ../src/SAML2.Core.Tests/SAML2.Core.Tests.csproj
+
+Build `src/SAML2.Core` in the same configuration first. See CHANGELOG-VENDAVO.md.
 
 ## Rebuilding
 
