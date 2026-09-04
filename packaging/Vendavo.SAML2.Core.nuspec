@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>Vendavo.SAML2.Core</id>
+    <version>1.0.2</version>
+    <title>SAML2.Core (Vendavo fork)</title>
+    <authors>Emil Lerch, Github Contributors</authors>
+    <owners>Vendavo</owners>
+    <license type="expression">MPL-2.0</license>
+    <projectUrl>https://github.com/jaluvkap-vendavo/SAML2</projectUrl>
+    <repository type="git" url="https://github.com/jaluvkap-vendavo/SAML2.git" branch="vendavo/fix-expectedresponses-thread-safety" />
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Vendavo fork of SAML2.Core (elerch/SAML2). Makes the session-less expected-response store thread safe and retargets to .NET Framework 4.8. Modifications are listed in CHANGELOG-VENDAVO.md in the repository.</description>
+    <readme>README.md</readme>
+    <copyright>Copyright 2017</copyright>
+    <tags>SAML2 Core library</tags>
+    <dependencies>
+      <group targetFramework="net48" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="..\src\SAML2.Core\bin\Release\SAML2.Core.dll" target="lib\net48" />
+    <file src="..\src\SAML2.Core\bin\Release\SAML2.Core.pdb" target="lib\net48" />
+    <file src="README.md" target="README.md" />
+    <file src="..\LICENSE" target="LICENSE" />
+    <file src="..\CHANGELOG-VENDAVO.md" target="CHANGELOG-VENDAVO.md" />
+  </files>
+</package>

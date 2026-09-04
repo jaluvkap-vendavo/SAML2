@@ -1,4 +1,8 @@
-﻿using SAML2.Bindings;
+﻿/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
+using SAML2.Bindings;
 using SAML2.Config;
 using SAML2.Logging;
 using SAML2.Schema.Core;
@@ -7,6 +11,7 @@ using SAML2.Schema.Protocol;
 using SAML2.Specification;
 using SAML2.Utils;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,6 +19,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography.Xml;
 using System.Text;
+using System.Threading;
 using System.Xml;
 
 namespace SAML2.Protocol
@@ -23,9 +29,38 @@ namespace SAML2.Protocol
         private static readonly IInternalLogger logger = LoggerProvider.LoggerFor(typeof(Utility));
 
         /// <summary>
-        /// Expected responses if session support is not present
+        /// Expected responses if session support is not present. The key is the AuthnRequest id,
+        /// the value the UTC time it was issued, which is used to discard ids of abandoned logins.
+        /// A concurrent collection is required: this is process wide state and several AuthnRequests
+        /// can be built at the same time (an unauthenticated page load typically triggers a challenge
+        /// per parallel request). A plain HashSet corrupts its internal arrays when that happens,
+        /// surfacing as IndexOutOfRangeException in HashSet.AddIfNotPresent.
         /// </summary>
-        private static readonly HashSet<string> expectedResponses = new HashSet<string>();
+        private static readonly ConcurrentDictionary<string, DateTime> expectedResponses = new ConcurrentDictionary<string, DateTime>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Age at which an unanswered AuthnRequest id becomes eligible for removal. This only bounds
+        /// memory: an id that is still present is always accepted, regardless of age, so no login that
+        /// would have succeeded before starts failing.
+        /// </summary>
+        private static readonly TimeSpan ExpectedResponseLifetime = TimeSpan.FromHours(8);
+
+        /// <summary>
+        /// Number of retained ids above which expired entries are purged.
+        /// </summary>
+        private const int ExpectedResponsePurgeThreshold = 1000;
+
+        /// <summary>
+        /// Shortest interval between two purges. A purge walks the whole collection, so it must not
+        /// run per request: above the threshold that would make every AuthnRequest O(n) in the number
+        /// of pending logins, on the request path.
+        /// </summary>
+        private static readonly TimeSpan ExpectedResponsePurgeInterval = TimeSpan.FromMinutes(5);
+
+        /// <summary>
+        /// UTC ticks of the last purge, also used to let a single thread claim the next one.
+        /// </summary>
+        private static long lastExpectedResponsePurgeTicks = DateTime.UtcNow.Ticks;
 
         /// <summary>
         /// Session key used to save the current message id with the purpose of preventing replay attacks
@@ -122,9 +157,47 @@ namespace SAML2.Protocol
             return null;
         }
 
+        /// <summary>
+        /// Records the id of an AuthnRequest that a response is expected for, when no session is available.
+        /// </summary>
+        /// <param name="id">The AuthnRequest id.</param>
         public static void AddExpectedResponseId(string id)
         {
-            expectedResponses.Add(id);
+            expectedResponses[id] = DateTime.UtcNow;
+            PurgeExpiredResponseIds();
+        }
+
+        /// <summary>
+        /// Drops ids older than <see cref="ExpectedResponseLifetime"/> once more than
+        /// <see cref="ExpectedResponsePurgeThreshold"/> are retained, and at most once per
+        /// <see cref="ExpectedResponsePurgeInterval"/>. Logins that are started but never completed
+        /// would otherwise accumulate for the lifetime of the process.
+        /// </summary>
+        private static void PurgeExpiredResponseIds()
+        {
+            if (expectedResponses.Count <= ExpectedResponsePurgeThreshold) {
+                return;
+            }
+
+            var now = DateTime.UtcNow;
+            var last = Interlocked.Read(ref lastExpectedResponsePurgeTicks);
+            if (now - new DateTime(last, DateTimeKind.Utc) < ExpectedResponsePurgeInterval) {
+                return;
+            }
+
+            // Whichever thread wins the exchange owns this purge; the others carry on without walking
+            // the collection.
+            if (Interlocked.CompareExchange(ref lastExpectedResponsePurgeTicks, now.Ticks, last) != last) {
+                return;
+            }
+
+            var cutoff = now - ExpectedResponseLifetime;
+            foreach (var expectedResponse in expectedResponses) {
+                if (expectedResponse.Value < cutoff) {
+                    DateTime issued;
+                    expectedResponses.TryRemove(expectedResponse.Key, out issued);
+                }
+            }
         }
 
 
@@ -230,10 +303,13 @@ namespace SAML2.Protocol
                     throw new Saml20Exception(string.Format(ErrorMessages.ReplayAttack, inResponseTo, expectedInResponseTo));
                 }
             } else {
-                if (!expectedResponses.Contains(inResponseTo)) {
+                // TryRemove takes the id in one atomic step. Checking membership and removing
+                // separately would let two concurrent responses carrying the same InResponseTo both
+                // pass the check, which is the replay this method exists to prevent.
+                DateTime issued;
+                if (!expectedResponses.TryRemove(inResponseTo, out issued)) {
                     throw new Saml20Exception(ErrorMessages.ExpectedInResponseToMissing);
                 }
-                expectedResponses.Remove(inResponseTo);
             }
             logger.Debug(TraceMessages.ReplaceAttackCheckCleared);
         }
@@ -242,9 +318,11 @@ namespace SAML2.Protocol
         {
             // Save request message id to session
             if (session != null) {
-                session.Add(ExpectedInResponseToSessionKey, request.Id);
+                // Assign rather than Add: one session can issue several AuthnRequests (a page load with
+                // parallel requests, or a retried login), and Add throws ArgumentException on the second.
+                session[ExpectedInResponseToSessionKey] = request.Id;
             } else {
-                expectedResponses.Add(request.Id);
+                AddExpectedResponseId(request.Id);
             }
         }
 
