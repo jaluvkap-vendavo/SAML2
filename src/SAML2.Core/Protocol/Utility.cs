@@ -19,6 +19,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography.Xml;
 using System.Text;
+using System.Threading;
 using System.Xml;
 
 namespace SAML2.Protocol
@@ -48,6 +49,18 @@ namespace SAML2.Protocol
         /// Number of retained ids above which expired entries are purged.
         /// </summary>
         private const int ExpectedResponsePurgeThreshold = 1000;
+
+        /// <summary>
+        /// Shortest interval between two purges. A purge walks the whole collection, so it must not
+        /// run per request: above the threshold that would make every AuthnRequest O(n) in the number
+        /// of pending logins, on the request path.
+        /// </summary>
+        private static readonly TimeSpan ExpectedResponsePurgeInterval = TimeSpan.FromMinutes(5);
+
+        /// <summary>
+        /// UTC ticks of the last purge, also used to let a single thread claim the next one.
+        /// </summary>
+        private static long lastExpectedResponsePurgeTicks = DateTime.UtcNow.Ticks;
 
         /// <summary>
         /// Session key used to save the current message id with the purpose of preventing replay attacks
@@ -156,8 +169,9 @@ namespace SAML2.Protocol
 
         /// <summary>
         /// Drops ids older than <see cref="ExpectedResponseLifetime"/> once more than
-        /// <see cref="ExpectedResponsePurgeThreshold"/> are retained. Logins that are started but never
-        /// completed would otherwise accumulate for the lifetime of the process.
+        /// <see cref="ExpectedResponsePurgeThreshold"/> are retained, and at most once per
+        /// <see cref="ExpectedResponsePurgeInterval"/>. Logins that are started but never completed
+        /// would otherwise accumulate for the lifetime of the process.
         /// </summary>
         private static void PurgeExpiredResponseIds()
         {
@@ -165,7 +179,19 @@ namespace SAML2.Protocol
                 return;
             }
 
-            var cutoff = DateTime.UtcNow - ExpectedResponseLifetime;
+            var now = DateTime.UtcNow;
+            var last = Interlocked.Read(ref lastExpectedResponsePurgeTicks);
+            if (now - new DateTime(last, DateTimeKind.Utc) < ExpectedResponsePurgeInterval) {
+                return;
+            }
+
+            // Whichever thread wins the exchange owns this purge; the others carry on without walking
+            // the collection.
+            if (Interlocked.CompareExchange(ref lastExpectedResponsePurgeTicks, now.Ticks, last) != last) {
+                return;
+            }
+
+            var cutoff = now - ExpectedResponseLifetime;
             foreach (var expectedResponse in expectedResponses) {
                 if (expectedResponse.Value < cutoff) {
                     DateTime issued;
